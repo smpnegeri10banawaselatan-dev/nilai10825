@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kelola Data Siswa</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #2d7ae0; color: white; }
+    button { cursor: pointer; padding: 5px 12px; margin: 0 4px; border: none; border-radius: 4px; }
+    button.edit { background-color: #1976d2; color: white; }
+    button.delete { background-color: #d32f2f; color: white; }
+    form { display: flex; gap: 10px; flex-wrap: wrap; }
+    form > * { flex: 1 1 150px; min-width: 120px; }
+    input, select { padding: 6px; font-size: 1em; }
+    #message { margin-top: 12px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>Kelola Data Siswa</h2>
+  <form id="formSiswa">
+    <input type="text" id="nis" placeholder="NIS (Nomor Induk Siswa)" required />
+    <input type="text" id="nama" placeholder="Nama Siswa" required />
+    <select id="kelas" required>
+      <option value="">Pilih Kelas</option>
+      <option value="7A">7A</option>
+      <option value="7B">7B</option>
+      <option value="8A">8A</option>
+      <option value="8B">8B</option>
+      <option value="9A">9A</option>
+      <option value="9B">9B</option>
+    </select>
+    <input type="text" id="alamat" placeholder="Alamat" required />
+    <button type="submit">Simpan</button>
+  </form>
+  <div id="message"></div>
+
+  <table id="tabelSiswa" aria-label="Daftar Siswa">
+    <thead>
+      <tr>
+        <th>NIS</th>
+        <th>Nama</th>
+        <th>Kelas</th>
+        <th>Alamat</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxxxxxxxxxxxxxx/exec'; // Ganti dengan URL Web App-mu
+
+    const form = document.getElementById('formSiswa');
+    const nisInput = document.getElementById('nis');
+    const namaInput = document.getElementById('nama');
+    const kelasInput = document.getElementById('kelas');
+    const alamatInput = document.getElementById('alamat');
+    const messageDiv = document.getElementById('message');
+    const tbody = document.querySelector('#tabelSiswa tbody');
+
+    let editMode = false;
+    let editNIS = null;
+
+    function showMessage(msg, isError = false) {
+      messageDiv.textContent = msg;
+      messageDiv.style.color = isError ? 'red' : 'green';
+      setTimeout(() => messageDiv.textContent = '', 4000);
+    }
+
+    async function fetchSiswa() {
+      try {
+        const res = await fetch(API_URL + '?action=getSiswa');
+        const data = await res.json();
+        renderTable(data);
+      } catch (err) {
+        showMessage('Gagal memuat data siswa', true);
+      }
+    }
+
+    function renderTable(data) {
+      tbody.innerHTML = '';
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        const [no, nama, alamat, kelas] = [row[0], row[1], row[2], row[3]];
+        tr.innerHTML = `
+          <td>${no}</td>
+          <td>${nama}</td>
+          <td>${kelas}</td>
+          <td>${alamat}</td>
+          <td>
+            <button class="edit" data-nis="${no}">Edit</button>
+            <button class="delete" data-nis="${no}">Hapus</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function fillForm(data) {
+      nisInput.value = data[0];
+      namaInput.value = data[1];
+      alamatInput.value = data[2];
+      kelasInput.value = data[3];
+    }
+
+    tbody.addEventListener('click', e => {
+      if (e.target.classList.contains('edit')) {
+        const nis = e.target.dataset.nis;
+        const tr = e.target.closest('tr');
+        const data = Array.from(tr.children).slice(0,4).map(td => td.textContent);
+        fillForm(data);
+        nisInput.disabled = true;
+        editMode = true;
+        editNIS = nis;
+      }
+      if (e.target.classList.contains('delete')) {
+        const nis = e.target.dataset.nis;
+        if (confirm(`Yakin hapus siswa dengan NIS ${nis}?`)) {
+          fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'hapusSiswa', nis }),
+            headers: { 'Content-Type': 'application/json' }
+          })
+          .then(res => res.text())
+          .then(msg => {
+            showMessage(msg);
+            fetchSiswa();
+          })
+          .catch(() => showMessage('Gagal menghapus siswa', true));
+        }
+      }
+    });
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const nis = nisInput.value.trim();
+      const nama = namaInput.value.trim();
+      const kelas = kelasInput.value;
+      const alamat = alamatInput.value.trim();
+      if (!nis || !nama || !kelas || !alamat) {
+        showMessage('Semua kolom wajib diisi!', true);
+        return;
+      }
+      const action = editMode ? 'editSiswa' : 'inputSiswa';
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action, nis, nama, kelas, alamat }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => res.text())
+      .then(msg => {
+        showMessage(msg);
+        form.reset();
+        nisInput.disabled = false;
+        editMode = false;
+        editNIS = null;
+        fetchSiswa();
+      })
+      .catch(() => showMessage('Gagal menyimpan data', true));
+    });
+
+    // Cek login sederhana (gunakan localStorage dari login.html)
+    if (!localStorage.getItem('login_user')) {
+      alert('Anda belum login! Akan diarahkan ke halaman login.');
+      window.location.href = 'login.html';
+    }
+
+    // Muat data siswa saat halaman siap
+    fetchSiswa();
+  </script>
+</body>
+</html>
