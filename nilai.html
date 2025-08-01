@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kelola Data Nilai</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 10px; }
+    h2 { color: #2d7ae0; }
+    form { display: flex; gap: 10px; flex-wrap: wrap; }
+    input, select { flex: 1 1 150px; padding: 6px; font-size: 1em; }
+    button { padding: 8px 14px; background: #2d7ae0; border: none; color: white; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #195ba6; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #2d7ae0; color: white; }
+    button.edit { background-color: #1976d2; }
+    button.delete { background-color: #d32f2f; }
+  </style>
+</head>
+<body>
+  <h2>Kelola Data Nilai</h2>
+
+  <form id="formNilai">
+    <input type="text" id="nis" placeholder="NIS" required />
+    <input type="text" id="mapel" placeholder="Mata Pelajaran" required />
+    <select id="semester" required>
+      <option value="">Pilih Semester</option>
+      <option value="1">1</option>
+      <option value="2">2</option>
+    </select>
+    <input type="number" id="nilai" placeholder="Nilai" min="0" max="100" required />
+    <button type="submit">Simpan</button>
+  </form>
+
+  <table id="tabelNilai" aria-label="Daftar Nilai">
+    <thead>
+      <tr>
+        <th>NIS</th>
+        <th>Mata Pelajaran</th>
+        <th>Semester</th>
+        <th>Nilai</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxxxxxxxxxxxxxx/exec'; // Ganti URL Web App-mu
+
+    const form = document.getElementById('formNilai');
+    const nisInput = document.getElementById('nis');
+    const mapelInput = document.getElementById('mapel');
+    const semesterInput = document.getElementById('semester');
+    const nilaiInput = document.getElementById('nilai');
+    const tbody = document.querySelector('#tabelNilai tbody');
+
+    function showMessage(msg, isError = false) {
+      alert(msg);
+    }
+
+    async function fetchNilai() {
+      try {
+        const res = await fetch(API_URL + '?action=getNilai');
+        const data = await res.json();
+        renderTable(data);
+      } catch {
+        showMessage('Gagal memuat data nilai', true);
+      }
+    }
+
+    function renderTable(data) {
+      tbody.innerHTML = '';
+      data.forEach(row => {
+        if(row.length < 4) return;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row[0]}</td>
+          <td>${row[1]}</td>
+          <td>${row[2]}</td>
+          <td>${row[3]}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const nis = nisInput.value.trim();
+      const mapel = mapelInput.value.trim();
+      const semester = semesterInput.value;
+      const nilai = nilaiInput.value.trim();
+
+      if (!nis || !mapel || !semester || !nilai) {
+        showMessage('Semua kolom wajib diisi!', true);
+        return;
+      }
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'inputNilai', nis, mapel, semester, nilai }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => res.text())
+      .then(msg => {
+        showMessage(msg);
+        form.reset();
+        fetchNilai();
+      })
+      .catch(() => showMessage('Gagal menyimpan nilai', true));
+    });
+
+    // Cek login sederhana
+    if (!localStorage.getItem('login_user')) {
+      alert('Anda belum login! Arahkan ke halaman login.');
+      window.location.href = 'login.html';
+    }
+
+    fetchNilai();
+  </script>
+</body>
+</html>
