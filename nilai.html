@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>Kelola Data Nilai</title>
   <style>
-    body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 10px; }
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; padding: 10px; }
     h2 { color: #2d7ae0; }
     form { display: flex; gap: 10px; flex-wrap: wrap; }
     input, select { flex: 1 1 150px; padding: 6px; font-size: 1em; }
@@ -13,8 +13,8 @@
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
     th { background-color: #2d7ae0; color: white; }
-    button.edit { background-color: #1976d2; }
-    button.delete { background-color: #d32f2f; }
+    button.edit { background-color: #1976d2; color: white; padding: 4px 10px; margin-right: 5px; border-radius: 3px; }
+    button.delete { background-color: #d32f2f; color: white; padding: 4px 10px; border-radius: 3px; }
   </style>
 </head>
 <body>
@@ -39,6 +39,7 @@
         <th>Mata Pelajaran</th>
         <th>Semester</th>
         <th>Nilai</th>
+        <th>Aksi</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -53,6 +54,9 @@
     const semesterInput = document.getElementById('semester');
     const nilaiInput = document.getElementById('nilai');
     const tbody = document.querySelector('#tabelNilai tbody');
+
+    let editMode = false;
+    let editId = null;
 
     function showMessage(msg, isError = false) {
       alert(msg);
@@ -70,7 +74,7 @@
 
     function renderTable(data) {
       tbody.innerHTML = '';
-      data.forEach(row => {
+      data.forEach((row, idx) => {
         if(row.length < 4) return;
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -78,6 +82,10 @@
           <td>${row[1]}</td>
           <td>${row[2]}</td>
           <td>${row[3]}</td>
+          <td>
+            <button class="edit" data-idx="${idx}">Edit</button>
+            <button class="delete" data-idx="${idx}">Hapus</button>
+          </td>
         `;
         tbody.appendChild(tr);
       });
@@ -95,23 +103,65 @@
         return;
       }
 
+      const action = editMode ? 'editNilai' : 'inputNilai';
+      const payload = { action, nis, mapel, semester, nilai };
+
+      if(editMode) {
+        payload.idx = editId;
+      }
+
       fetch(API_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: 'inputNilai', nis, mapel, semester, nilai }),
+        body: JSON.stringify(payload),
         headers: { 'Content-Type': 'application/json' }
       })
       .then(res => res.text())
       .then(msg => {
         showMessage(msg);
         form.reset();
+        editMode = false;
+        editId = null;
         fetchNilai();
       })
       .catch(() => showMessage('Gagal menyimpan nilai', true));
     });
 
-    // Cek login sederhana
+    tbody.addEventListener('click', e => {
+      if(e.target.classList.contains('edit')) {
+        const idx = e.target.dataset.idx;
+        fetch(API_URL + '?action=getNilai')
+          .then(res => res.json())
+          .then(data => {
+            const row = data[idx];
+            if(!row) return;
+            nisInput.value = row[0];
+            mapelInput.value = row[1];
+            semesterInput.value = row[2];
+            nilaiInput.value = row[3];
+            editMode = true;
+            editId = idx;
+          });
+      }
+      if(e.target.classList.contains('delete')) {
+        const idx = e.target.dataset.idx;
+        if(confirm('Yakin hapus nilai ini?')) {
+          fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'hapusNilai', idx }),
+            headers: { 'Content-Type': 'application/json' }
+          })
+          .then(res => res.text())
+          .then(msg => {
+            showMessage(msg);
+            fetchNilai();
+          })
+          .catch(() => showMessage('Gagal menghapus nilai', true));
+        }
+      }
+    });
+
     if (!localStorage.getItem('login_user')) {
-      alert('Anda belum login! Arahkan ke halaman login.');
+      alert('Anda belum login!');
       window.location.href = 'login.html';
     }
 
