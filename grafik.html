@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Grafik Analisis Nilai Per Semester</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 900px; margin: 20px auto; padding: 10px; }
+    h2 { color: #2d7ae0; margin-bottom: 20px; }
+    canvas { background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+  <h2>Grafik Rata-rata Nilai per Semester</h2>
+  <canvas id="chartNilai" width="800" height="400"></canvas>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxxxxxxxxxxxxxx/exec'; // Ganti URL Web App-mu
+
+    async function getNilai() {
+      const res = await fetch(API_URL + '?action=getNilai');
+      return await res.json();
+    }
+
+    function hitungRataRataPerSemester(data) {
+      // data = array [ [nis, mapel, semester, nilai], ... ]
+      const semesterData = {};
+      data.forEach(row => {
+        if(row.length < 4) return;
+        const semester = row[2];
+        const nilai = Number(row[3]);
+        if (!semesterData[semester]) {
+          semesterData[semester] = { total: 0, count: 0 };
+        }
+        semesterData[semester].total += nilai;
+        semesterData[semester].count++;
+      });
+      const labels = Object.keys(semesterData).sort();
+      const averages = labels.map(s => (semesterData[s].total / semesterData[s].count).toFixed(2));
+      return { labels, averages };
+    }
+
+    async function drawChart() {
+      const data = await getNilai();
+      const { labels, averages } = hitungRataRataPerSemester(data);
+
+      const ctx = document.getElementById('chartNilai').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Rata-rata Nilai',
+            data: averages,
+            backgroundColor: 'rgba(45, 122, 224, 0.7)',
+            borderColor: 'rgba(45, 122, 224, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true, max: 100 }
+          }
+        }
+      });
+    }
+
+    if (!localStorage.getItem('login_user')) {
+      alert('Anda belum login!');
+      window.location.href = 'login.html';
+    } else {
+      drawChart();
+    }
+  </script>
+</body>
+</html>
