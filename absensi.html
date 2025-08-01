@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kelola Absensi Siswa</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 20px auto; padding: 10px; }
+    h2 { color: #2d7ae0; }
+    form { display: flex; gap: 10px; flex-wrap: wrap; }
+    input, select { flex: 1 1 150px; padding: 6px; font-size: 1em; }
+    button { padding: 8px 14px; background: #2d7ae0; border: none; color: white; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #195ba6; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #2d7ae0; color: white; }
+    button.delete { background-color: #d32f2f; }
+  </style>
+</head>
+<body>
+  <h2>Kelola Absensi Siswa</h2>
+
+  <form id="formAbsensi">
+    <input type="text" id="nis" placeholder="NIS" required />
+    <input type="date" id="tanggal" required />
+    <select id="keterangan" required>
+      <option value="">Keterangan</option>
+      <option value="Hadir">Hadir</option>
+      <option value="Sakit">Sakit</option>
+      <option value="Izin">Izin</option>
+      <option value="Alpha">Alpha</option>
+    </select>
+    <button type="submit">Simpan</button>
+  </form>
+
+  <table id="tabelAbsensi" aria-label="Daftar Absensi">
+    <thead>
+      <tr>
+        <th>NIS</th>
+        <th>Tanggal</th>
+        <th>Keterangan</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxxxxxxxxxxxxxx/exec'; // Ganti URL Web App-mu
+
+    const form = document.getElementById('formAbsensi');
+    const nisInput = document.getElementById('nis');
+    const tanggalInput = document.getElementById('tanggal');
+    const ketInput = document.getElementById('keterangan');
+    const tbody = document.querySelector('#tabelAbsensi tbody');
+
+    function showMessage(msg, isError = false) {
+      alert(msg);
+    }
+
+    async function fetchAbsensi() {
+      try {
+        const res = await fetch(API_URL + '?action=getAbsensi');
+        const data = await res.json();
+        renderTable(data);
+      } catch {
+        showMessage('Gagal memuat data absensi', true);
+      }
+    }
+
+    function renderTable(data) {
+      tbody.innerHTML = '';
+      data.forEach(row => {
+        if(row.length < 3) return;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row[0]}</td>
+          <td>${row[1]}</td>
+          <td>${row[2]}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const nis = nisInput.value.trim();
+      const tanggal = tanggalInput.value;
+      const ket = ketInput.value;
+
+      if (!nis || !tanggal || !ket) {
+        showMessage('Semua kolom wajib diisi!', true);
+        return;
+      }
+
+      fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'inputAbsensi', nis, tanggal, keterangan: ket }),
+        headers: { 'Content-Type': 'application/json' }
+      })
+      .then(res => res.text())
+      .then(msg => {
+        showMessage(msg);
+        form.reset();
+        fetchAbsensi();
+      })
+      .catch(() => showMessage('Gagal menyimpan absensi', true));
+    });
+
+    // Cek login sederhana
+    if (!localStorage.getItem('login_user')) {
+      alert('Anda belum login! Arahkan ke halaman login.');
+      window.location.href = 'login.html';
+    }
+
+    fetchAbsensi();
+  </script>
+</body>
+</html>
