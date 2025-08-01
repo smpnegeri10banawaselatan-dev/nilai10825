@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login Admin Sistem Informasi</title>
+  <style>
+    body { font-family: Arial, sans-serif; display: flex; height: 100vh; justify-content: center; align-items: center; background: #f0f4ff; margin: 0; }
+    form { background: white; padding: 24px 32px; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.12); width: 320px; }
+    h2 { margin-bottom: 20px; color: #2d7ae0; }
+    input { width: 100%; padding: 10px 12px; margin-bottom: 14px; border: 1px solid #ccc; border-radius: 4px; font-size: 1em; }
+    button { width: 100%; padding: 10px; background: #2d7ae0; border: none; color: white; font-size: 1em; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #195ba6; }
+    #msg { margin-top: 12px; font-weight: bold; color: red; text-align: center; }
+  </style>
+</head>
+<body>
+  <form id="loginForm">
+    <h2>Login Admin</h2>
+    <input type="text" id="username" placeholder="Username" required autocomplete="username" />
+    <input type="password" id="password" placeholder="Password" required autocomplete="current-password" />
+    <button type="submit">Login</button>
+    <div id="msg"></div>
+  </form>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxxxxxxxxxxxxxxxxxxxxxxxxxxxx/exec'; // Ganti dengan Web App URL kamu
+
+    const form = document.getElementById('loginForm');
+    const msg = document.getElementById('msg');
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+
+      msg.textContent = 'Memeriksa...';
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'login', username, password }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          localStorage.setItem('login_user', username);
+          localStorage.setItem('user_role', data.role || '');
+          window.location.href = 'index.html';
+        } else {
+          msg.textContent = 'Username atau password salah.';
+        }
+      } catch {
+        msg.textContent = 'Gagal terhubung ke server.';
+      }
+    });
+  </script>
+</body>
+</html>
